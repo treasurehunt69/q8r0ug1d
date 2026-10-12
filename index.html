@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MGIT Treasure Hunt · 6x6 Image Puzzle</title>
+  <title>MGIT Treasure Hunt · 4x4 Image Puzzle</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Poppins:wght@300;400;500;600&display=swap');
 
@@ -179,6 +179,21 @@
       box-shadow: none;
     }
 
+    /* ── Solve button styling ── */
+    .solve-btn {
+      margin-top: 12px;
+      background: linear-gradient(135deg, #2a6b3f, #1a3d24);
+      border-color: rgba(90, 200, 120, 0.5);
+      color: #b8f0c8;
+      font-size: 13px;
+      letter-spacing: 3px;
+    }
+
+    .solve-btn:hover {
+      background: linear-gradient(135deg, #35854e, #204c2d);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(90, 200, 120, 0.2);
+    }
+
     #error {
       display: none;
       color: #e57373;
@@ -213,18 +228,18 @@
       margin-bottom: 25px;
     }
 
-    /* 6x6 puzzle grid */
+    /* 4x4 puzzle grid */
     .puzzle-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 4px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
       justify-content: center;
       align-items: center;
       margin: 0 auto 16px;
-      max-width: 360px;
+      max-width: 340px;
       aspect-ratio: 1 / 1;
       background: rgba(0, 0, 0, 0.4);
-      padding: 6px;
+      padding: 8px;
       border-radius: 10px;
       border: 1px solid rgba(212, 175, 55, 0.4);
       box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
@@ -234,10 +249,10 @@
       aspect-ratio: 1 / 1;
       width: 100%;
       height: 100%;
-      border-radius: 4px;
+      border-radius: 5px;
       cursor: pointer;
       transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s;
-      background-size: 600% 600%;
+      background-size: 400% 400%;
       background-repeat: no-repeat;
       border: 1px solid rgba(212, 175, 55, 0.25);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
@@ -261,6 +276,17 @@
       transform: none;
       box-shadow: none;
       filter: none;
+    }
+
+    /* Animation when solved automatically */
+    .puzzle-tile.solving {
+      animation: solveFlash 0.5s ease;
+    }
+
+    @keyframes solveFlash {
+      0% { transform: scale(1); filter: brightness(1); }
+      40% { transform: scale(1.08); filter: brightness(1.6); }
+      100% { transform: scale(1); filter: brightness(1); }
     }
 
     .puzzle-hint {
@@ -338,11 +364,11 @@
       }
       .puzzle-grid {
         max-width: 280px;
-        gap: 3px;
-        padding: 4px;
+        gap: 4px;
+        padding: 6px;
       }
       .puzzle-tile {
-        border-radius: 3px;
+        border-radius: 4px;
       }
       .next-password {
         font-size: 18px;
@@ -377,11 +403,12 @@
       <div class="success-title">SOLVE THE PUZZLE</div>
 
       <div class="puzzle-box">
-        <div class="puzzle-grid" id="puzzleGrid" aria-label="6 by 6 sliding puzzle"></div>
+        <div class="puzzle-grid" id="puzzleGrid" aria-label="4 by 4 sliding puzzle"></div>
         <div class="puzzle-hint">
           Tap a tile next to the empty space to slide it · <span id="moveCounter">0</span> moves
         </div>
         <div id="winBadge" style="display:none;" class="win-badge">✦ PUZZLE SOLVED ✦</div>
+        <button id="solveBtn" class="solve-btn" onclick="solvePuzzle()">⚡ AUTO‑SOLVE ⚡</button>
       </div>
 
       <div class="next-box" id="nextBox" style="display:none;">
@@ -397,16 +424,16 @@
     // ============================================================
     //  CONFIGURATION
     //  Replace the IMAGE_URL with your actual image.
-    //  The image will be split into 36 tiles (6x6 grid).
+    //  The image will be split into 16 tiles (4x4 grid).
     // ============================================================
     const IMAGE_URL = "/image.jpg"; // ← YOUR IMAGE HERE
-    const GRID_SIZE = 6; // 6x6 = 36 tiles
+    const GRID_SIZE = 4; // 4x4 = 16 tiles
     const TOTAL_TILES = GRID_SIZE * GRID_SIZE;
 
     // ============================================================
     //  PUZZLE STATE
     // ============================================================
-    let tiles = [];          // array of tile indices (0 .. 35)
+    let tiles = [];          // array of tile indices (0 .. 15)
     let emptyIndex = TOTAL_TILES - 1; // bottom-right is the empty slot
     let moves = 0;
     let solved = false;
@@ -420,6 +447,7 @@
     const winBadge = document.getElementById("winBadge");
     const nextBox = document.getElementById("nextBox");
     const nextPasswordDisplay = document.getElementById("nextPasswordDisplay");
+    const solveBtn = document.getElementById("solveBtn");
 
     // ============================================================
     //  PASSWORD CHECK (serverless — keeps passwords on the server)
@@ -460,7 +488,7 @@
     //  PUZZLE INITIALIZATION
     // ============================================================
     function initPuzzle() {
-      // Create solved order [0, 1, 2, ..., 35]
+      // Create solved order [0, 1, 2, ..., 15]
       tiles = Array.from({ length: TOTAL_TILES }, (_, i) => i);
       emptyIndex = TOTAL_TILES - 1;
       moves = 0;
@@ -468,9 +496,11 @@
       moveCounter.textContent = "0";
       winBadge.style.display = "none";
       nextBox.style.display = "none";
+      solveBtn.disabled = false;
+      solveBtn.textContent = "⚡ AUTO‑SOLVE ⚡";
 
       // Shuffle the puzzle (guaranteed solvable — just random valid moves)
-      shufflePuzzle(120); // 120 random moves ensures good mix
+      shufflePuzzle(80); // 80 random moves for a 4x4 grid
 
       renderPuzzle();
     }
@@ -536,7 +566,6 @@
           tileEl.classList.add("empty");
         } else {
           // Background position for the image slice
-          // tileValue maps to row/col in the ORIGINAL image
           const origRow = Math.floor(tileValue / GRID_SIZE);
           const origCol = tileValue % GRID_SIZE;
 
@@ -564,7 +593,6 @@
 
       // Swap
       swapTiles(emptyIndex, clickedIndex);
-      const oldEmpty = emptyIndex;
       emptyIndex = clickedIndex;
 
       moves++;
@@ -574,11 +602,48 @@
 
       // Check win
       if (isSolved()) {
-        solved = true;
-        winBadge.style.display = "inline-block";
-        nextBox.style.display = "block";
-        nextPasswordDisplay.textContent = nextPasswordFromServer;
+        onPuzzleSolved();
       }
+    }
+
+    // ============================================================
+    //  AUTO-SOLVE — instantly puts all tiles in correct order
+    // ============================================================
+    function solvePuzzle() {
+      if (solved) return;
+
+      // Reset tiles to the solved state [0, 1, 2, ..., 15]
+      tiles = Array.from({ length: TOTAL_TILES }, (_, i) => i);
+      emptyIndex = TOTAL_TILES - 1;
+
+      // Render the solved puzzle with a flash animation
+      renderPuzzle();
+
+      // Add flash animation to all tiles
+      const allTiles = puzzleGrid.querySelectorAll(".puzzle-tile");
+      allTiles.forEach((tile, idx) => {
+        setTimeout(() => {
+          tile.classList.add("solving");
+          setTimeout(() => tile.classList.remove("solving"), 500);
+        }, idx * 10); // staggered start for a nice cascade effect
+      });
+
+      // Mark as solved after a short delay for the animation
+      setTimeout(() => {
+        onPuzzleSolved();
+      }, 300);
+    }
+
+    // ============================================================
+    //  CALLED WHEN PUZZLE IS SOLVED (manually or auto)
+    // ============================================================
+    function onPuzzleSolved() {
+      solved = true;
+      winBadge.style.display = "inline-block";
+      nextBox.style.display = "block";
+      nextPasswordDisplay.textContent = nextPasswordFromServer;
+      solveBtn.disabled = true;
+      solveBtn.textContent = "✔ SOLVED";
     }
 
     // ============================================================
